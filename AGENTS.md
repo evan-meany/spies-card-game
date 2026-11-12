@@ -2,6 +2,8 @@
 
 A two-player card game ("spades are spies") written in Go. The rules are in `README.md`; they are the spec for the game logic.
 
+> The project is being re-targeted from Go to an Android and iOS app (Expo, React Native, TypeScript). The Layout, Toolchain and Rules below describe the Go code as it stands until `docs/roadmap/roadmap.md` phase 1 replaces it; the roadmap wins where they differ.
+
 ## Layout
 - `src/main.go` is the entry point. `src/game/` holds the cards, deck and game rules. `src/util/` holds small generic helpers.
 - `test/` holds a prototype WebSocket matchmaking server (`server.go`) and a browser console client (`client.js`).

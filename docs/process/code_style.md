@@ -1,5 +1,7 @@
 # Code Style
 
+> This describes the Go code as it stands. Phase 1 of `docs/roadmap/roadmap.md` moves the project to TypeScript (Expo) and rewrites this file; until then follow it for any Go, and use the same spirit (pure engine in `src/engine/`, tests per README rule, errors not panics) for new TypeScript.
+
 - Format with `gofmt`; `go vet` must be clean.
 - Follow the existing naming: exported types and constructors (`Card`, `NewDeck`), `String()` methods for printable enums, `All<Things>` arrays for iteration.
 - Every exported identifier gets a one-line doc comment. Keep comments to a single line.

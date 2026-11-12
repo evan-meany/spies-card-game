@@ -1,32 +1,65 @@
 # Spies Roadmap
 
-Goal: a playable online version of Spies, the two-player card game in `README.md`. First a tested rules engine, then a server that runs matches, then a client to play in.
+Goal: a mobile app for Android and iOS that plays Spies, the two-player card game in `README.md`. Play on one phone (hot-seat), against the computer, or online against another person, and ship on the Google Play Store and the Apple App Store. First a tested rules engine, then the game screen, then local play, then online play, then the stores.
 
 ## Guiding decisions
 - **`README.md` is the spec.** Rules are implemented as written; ambiguities are settled under *Decisions* below.
-- **Pure engine, thin edges.** `src/game/` is deterministic and I/O-free; the server and clients only send moves and render state.
-- **Each phase ends runnable** and passes `scripts/check.sh`.
+- **Pure engine, thin edges.** The rules live in `src/engine/`: plain TypeScript, deterministic, no I/O, no React, no React Native imports. The UI, the computer opponent and the online server only send moves into it and render the state it returns.
+- **One engine, three users.** The same engine code runs on the phone (hot-seat and vs computer) and on the online server, so the rules exist in one place.
+- **One codebase, both platforms.** Expo and React Native with TypeScript, no platform-specific screens. Same stack and layout as the sibling `doodle-pad` app (`C:\Users\Evan\Dev\doodle-pad`): Expo Router with routes in `src/app/`, packages added with `npx expo install`, no hand-edited `ios/` or `android/`, native config through `app.json` and config plugins. Check the docs for the installed Expo SDK before using any API; library names here are candidates until the phase that needs them starts.
+- **Builds come from EAS.** Development builds, store builds and submission run through EAS, so no local Xcode or Android Studio is required. This machine is Windows: iOS builds need EAS (cloud) or a Mac, and iOS can only be run on a real device or a Mac simulator. Android is the day-to-day target until an iOS device is available; iOS stays a target and is untested until then.
+- **Hidden information stays hidden.** The engine exposes a per-player view (own hand, opponent's hand size, deck size, boards). Online, the server is authoritative and never sends the opponent's hand.
+- **Each phase ends runnable** and passes `scripts/check.sh`. Agents can't judge how the game feels on a device, so each UI phase's exit checks include a hand test by the user.
 
 ## Phases
-Each phase is one branch and one PR (see `docs/process/git_guidelines.md`). Later phases stay one line until started.
+Each phase is one branch and one PR (see `docs/process/git_guidelines.md`). Later phases stay one line until started, then expand into a checklist ending with an **Exit checks** item.
 
-1. **Rules engine** (`minor`): branch `phase-1-rules-engine`
-    - [ ] **Fix the module build**: track `go.mod` (remove `*.mod` from `.gitignore`), name the module `spies` to match the imports, require `gorilla/websocket`, and make `scripts/check.sh` pass
-    - [ ] **Card points and spies**: point values (Ace 3, 10–King 2, 2–9 1), `IsSpy`, `IsDoubleAgent`, tests
-    - [ ] **Deck draw and shuffle**: seeded shuffle, draw, add cards back, tests
-    - [ ] **Board**: two sides with Clubs, Hearts and Diamonds rows, spies stacked on cards, card value floored at 0, row totals
-    - [ ] **Game setup**: deal 15, each player discards 5, discards reshuffled into the deck
-    - [ ] **Turns**: play a suit card to its row, play a spy on an opponent card, trade one spy per turn, pass, auto-pass with no legal moves
-    - [ ] **Double agents**: 2 of Clubs, Hearts or Diamonds replace or play normally; 2 of Spades replaces a spy or plays as a spy
-    - [ ] **Rounds and game**: round start flip and first player, round end, row and round winners with ties, three rounds with hands carried over, skip round three after a 2–0 lead
-    - [ ] **CLI game**: `src/main.go` plays a hot-seat game in the terminal over the engine
-    - [ ] **Exit checks**: `scripts/check.sh` passes, every `README.md` rule has a test, a full CLI game played to the end, README and docs match the code
-2. **Match server** (`minor`): grow `test/server.go` into a server package that runs engine matches over WebSocket, with per-player hidden hands
-3. **Client** (`minor`): a browser client to join, see the board and play
+1. **Foundation and engine** (`major`): branch `phase-1-foundation-and-engine`. Re-targets the repo from Go to a mobile app, so it is `major`.
+    - [ ] **Scaffold the Expo app**: new Expo project in the repo root with TypeScript, Expo Router (`src/app/`), ESLint (`npx expo lint`), `app.json` (name Spies, slug `spies`, scheme `spies`, portrait, placeholder `com.example.spies` identifiers), the Expo template placeholder assets, a one-screen home that runs in Expo Go on Android. Read the installed SDK's docs first; mirror `doodle-pad`'s `package.json`, `tsconfig.json` and `.gitignore` (and drop `*.mod`). Go code is left untouched for now
+    - [ ] **Toolchain and check script**: add Jest (`jest-expo`) with one smoke test; `package.json` scripts `typecheck` (`tsc --noEmit`), `lint`, `test` and `check` running all three; extend `scripts/check.sh` to run `npm run check` after the existing Go checks (it stays the one command every commit must pass; the Go checks are removed in the retire task so the script passes at every commit); decide and document how it runs on this Windows machine (Node runs natively, Go still needs WSL until retired, so the script may need to run from WSL with a Linux Node or be split); update `.claude/settings.json` permissions to match
+    - [ ] **Card model**: `src/engine/cards.ts` with `Suit`, `Rank`, `Card`, `ALL_SUITS`, `ALL_RANKS`, rank ordering (Ace high) for the round-start flip, point values (Ace 3, 10 to King 2, 2 to 9 1), `isSpy` and `isDoubleAgent`, card ids and `cardToString`; table-driven tests. Port the intent of `src/game/card*.go`
+    - [ ] **Deck**: seeded PRNG (a small mulberry32-style function, no dependency), `newDeck`, `shuffle(deck, rng)` (Fisher-Yates, returns a new array), `draw`, `addCards`; tests for determinism with a seed, no card lost or duplicated, drawing from an empty deck
+    - [ ] **Board**: immutable state for two sides, each with Clubs, Hearts and Diamonds rows of cards; spies stacked on cards; card value = base points minus its spies, floored at 0; row totals; replace and move helpers; tests including the floor at 0 and several spies on one card
+    - [ ] **Game setup**: deal 15 to each player, each player chooses 5 to discard (a move, so a player or the computer can choose), discards are reshuffled into the deck (32 cards); phase and state types in `src/engine/state.ts`; the per-player `viewFor(state, player)`; tests with a seed
+    - [ ] **Turns**: `Move` as a discriminated union (play suit card, play spy on a target, trade a spy, pass, discard during setup), `legalMoves(state)`, `applyMove(state, move)` returning the new state or a typed error for an illegal move (no throwing for expected illegal moves); trade (uses the turn, limit from the engine settings), pass is final for the round, auto-pass only with an empty hand; tests per rule; engine rule options live in one `RuleSettings` object (see *Decisions*)
+    - [ ] **Double agents**: 2 of Clubs, Hearts or Diamonds replace an opponent card of the same suit or play normally; 2 of Spades replaces a spy on one of your own cards or plays as a 1-point spy; scoring as in the README; tests for each branch and edge case
+    - [ ] **Rounds and game**: round start flip (rank compare, re-flip on a tie) and first player, round end when both have passed with the board cleared, row winners and ties, round winner by rows then total points, round tie, three rounds with hands carried over, round three skipped after a 2-0 lead, game winner or tie; tests including every tie case
+    - [ ] **Engine hardening**: a randomized playout test (seeded, many full games with random legal moves) that checks invariants: no card lost or duplicated, values never below 0, every game terminates, `legalMoves` never yields a move `applyMove` rejects, the same seed gives the same game; `README.md` rules cross-checked with a checklist in the test file names
+    - [ ] **Retire the Go code**: once the engine passes, delete `src/main.go`, `src/game/`, `src/util/`, `test/server.go`, `test/client.js`, `go.mod` references, `scripts/install_go.sh`, `scripts/run*.sh` and `scripts/init.sh` if they are Go-only, and the Go parts of `check.sh`; keep a copy of the prototype's message ideas (hello, queued, match, move, state, leave) in *Decisions* for the online phase; update `AGENTS.md`, `docs/process/code_style.md` (TypeScript conventions), `.github/` and `README.md` (a short "Running the app" section, rules unchanged) so no doc mentions Go or WSL
+    - [ ] **Exit checks**: `scripts/check.sh` passes from a clean checkout, the app starts in Expo Go on Android, every `README.md` rule has a test, the randomized playout passes, no Go files remain, `npx expo-doctor` is clean, docs match the code
+2. **Game UI** (`minor`): the table screen: two sides with three rows, spies shown on their cards, your hand along the bottom, deck and discard, tap or drag to play with legal targets highlighted, choices for double agents and trading, scores per row, pass, round and game result screens, a rules screen, and card art, all driven by the engine over a local game state
+3. **Local play** (`minor`): a home screen and new game flow, hot-seat on one phone with a hand-over screen that hides each hand, a computer opponent (a heuristic player that picks from `legalMoves`, with an easy and a normal level), the setup discard step for both, saving and resuming a game in `expo-file-system`, a settings screen
+4. **Online multiplayer** (`minor`): a small Node and TypeScript WebSocket server in `server/` that imports `src/engine/`, authoritative moves, per-player views, matchmaking and private rooms by code, reconnect and resume, move timers and abandon handling, deployment to a small hosting service, and the app's lobby and connection screens
+5. **Polish** (`minor`): app icon and splash, light and dark themes, haptics and sound with a mute setting, animations, accessibility labels and touch targets, tablet and landscape layouts, a performance pass on a low-end Android phone
+6. **Store readiness** (`minor`): EAS build profiles and real app identifiers, signing, versioning tied to `VERSION`, privacy policy, store listings and screenshots, an Apple Developer account and App Store Connect setup, then internal testing on Google Play and TestFlight
+7. **Launch** (`minor`): submit with `eas submit`, production release on both stores, crash reporting, and over-the-air fixes with `eas update`
 
 ## Decisions
-- (none yet)
+- **Stack: Expo, React Native and TypeScript.** Chosen because the sibling `doodle-pad` app already uses it on this machine (Expo Router, EAS, Android testing in Expo Go), it gives one codebase for both stores, EAS builds iOS without a Mac, and TypeScript lets the same engine run on the phone and in a Node server. Flutter, Kotlin Multiplatform and a Go-based mobile binding were rejected as new toolchains with no reuse here.
+- **Fate of the Go code: port the engine, then retire all of it.** `src/game/` is only a stub (cards, suits and an unfinished deck, no rules), so a port loses nothing. Keeping Go would mean running it on the phone through gomobile or duplicating the rules in a second language for the server. `test/server.go` is a demo (it flips turns on any move) and is replaced by a Node server in the online phase that reuses the engine. The Go code stays in git history. The prototype's messages (`hello`, `queued`, `match`, `move`, `state`, `chat`, `leave`, `error`) are a reasonable starting vocabulary for the online protocol.
+- **One home for the roadmap.** It stays at `docs/roadmap/roadmap.md`, where the process docs and the agents point. There is no second root `ROADMAP.md`; `doodle-pad` keeps its roadmap at the root, but moving this one would break those references for no gain.
+- **Project layout (target after phase 1).** `src/app/` routes, `src/engine/` rules, `src/components/` UI, `src/theme.ts` colours, `server/` online server (own `package.json`, added in phase 4), `scripts/` check and CI scripts, `.github/workflows/` unchanged. Tests are `*.test.ts` next to the code.
+- **Check script.** `scripts/check.sh` stays the single pre-commit command and wraps `npm run check` (typecheck, lint, Jest). Process docs and agent permissions keep pointing at it.
+- **Versioning.** The existing `VERSION` and `CHANGELOG.md` bot stays. Syncing `app.json` `version` with `VERSION` is decided in Store readiness.
+- **Rules live in `README.md`.** Settled rule readings are written there only. Still open, to be settled with a test in the task that implements each (proposed reading in brackets; record the final choice here):
+    - *Empty deck*: the deck is 32 cards after setup, and round flips and trades draw from it. [A round flip with fewer than 2 cards available adds no card and the player who did not go first last round starts; a trade with an empty deck still discards the Spy and draws nothing.]
+    - *Spy targets*: "an opponent's card". [Only a Club, Heart or Diamond (including a 2 played normally), never another Spy.]
+    - *Setup discard*: both players discard 5 face down. [The engine models it as two discard moves in either order.]
+    - *Third round*: [skipped only after a 2-0 lead, not after 1 win and a tie.]
+- **Rule options are engine settings.** The tied-round tiebreak (total points) and the trade limit (one per turn) are named fields of one `RuleSettings` object passed to the engine, not hard-coded, because the user may tune them after playtesting. Possible later variants: one trade per round; a 2 cannot replace an Ace.
+- **Open choices for the user.**
+    - Is a computer opponent required before online play, and how strong should it be? (Assumed: a simple heuristic in phase 3.)
+    - Online accounts: anonymous device-based play with private rooms by code is assumed; no sign-in. Say if friends lists, rankings or accounts are wanted.
+    - Hosting for the online server (assumed: a small free or cheap host such as Fly.io or Render) and who pays for it.
+    - App name, final bundle and package identifier, and store accounts: a Google Play developer account and an Apple Developer Program membership (paid) are needed before Store readiness. The Apple account and a TestFlight device are the earliest point iOS can be tested.
+    - Art and sound: placeholder vector card faces are assumed; custom art is the user's call.
+    - Whether landscape and tablets are in scope for the first release (assumed: portrait phones first).
+- **Constraints.** Windows machine: Node and Expo run natively; EAS builds iOS in the cloud. No iOS device or Mac is available yet, so iOS is untested and hand tests are Android in Expo Go (the user's Pixel 9a, as for `doodle-pad`). Expo Go ignores config plugins, so anything depending on them needs a development build.
 
 ## Notes for agents
-- Check off items here as you finish them. Record decisions and known limitations under *Decisions*.
+- Check off items here as you finish them, and collapse a phase to one line when its exit checks pass.
+- Record decisions and known limitations under *Decisions*.
 - Prefer finishing a runnable slice over broad unfinished scaffolding.
+- Before writing any Expo, EAS or React Native code, read the installed `expo` major version in `package.json` and the matching docs at `https://docs.expo.dev/versions/v<major>.0.0/`; do not answer from memory. Use `npx expo install` to add packages.
+- Keep `src/engine/` free of React, React Native, Expo and Node imports so the server can reuse it.
+- Phase 1 is a migration: until the retire task, the Go code and its check still exist and must not be broken by the scaffold.

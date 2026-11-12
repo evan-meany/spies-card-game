@@ -23,9 +23,9 @@ An orchestrator agent hands roadmap tasks to worker subagents one at a time, so 
 ## Running it
 - Interactive: `claude --agent orchestrator` in the repo, then tell it which phase to run.
 - Headless: `claude --agent orchestrator -p "Run phase 1"`. Headless runs can't answer permission prompts, so allow what the worker needs in `.claude/settings.json` first.
-- Models are the `model:` line in each agent file: `.claude/agents/orchestrator.md` (Opus, no edit tools) and `.claude/agents/worker.md` (Sonnet, with push, merge, `gh` and hook bypass denied).
+- Models are the `model:` line in each agent file: `.claude/agents/orchestrator.md` (Opus, no edit tools) and `.claude/agents/worker.md` (Sonnet; only its instructions stop it pushing, merging, using `gh` or bypassing hooks).
 
 ## Decisions
 - Workers never start subagents; the orchestrator is the main session and the worker a subagent.
-- Workers never push, merge, open PRs or skip hooks. The orchestrator pushes phase branches and opens PRs only after you approve the phase, and merges only when you say so. `settings.json` denies force-push.
+- Workers never push, merge, open PRs or skip hooks. The orchestrator pushes phase branches and opens PRs only after you approve the phase, and merges only when you say so. `.claude/settings.json` only denies force-push and pushing to main.
 - Workers share state only through the repo, so anything the next task needs goes in a doc or commit. Worker reports pile up in the orchestrator's context, so keep them short.

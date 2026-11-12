@@ -1,0 +1,15 @@
+# Default: normalize to LF in repo
+* text=auto
+
+# Shell scripts must always use LF
+*.sh text eol=lf
+
+# Python scripts must use LF
+*.py text eol=lf
+
+# YAML workflows must use LF
+*.yml text eol=lf
+
+# Markdown and VERSION
+*.md text eol=lf
+VERSION text eol=lf

@@ -1,6 +1,16 @@
 {
   "permissions": {
     "allow": [
+      "Bash(bash scripts/check.sh)",
+      "PowerShell(& \"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/check.sh)",
+      "Bash(npm run check)",
+      "PowerShell(npm run check)",
+      "Bash(npm run typecheck)",
+      "PowerShell(npm run typecheck)",
+      "Bash(npm run lint)",
+      "PowerShell(npm run lint)",
+      "Bash(npm run test)",
+      "PowerShell(npm run test)",
       "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- bash scripts/check.sh)",
       "Bash(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- bash scripts/check.sh)",
       "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- go *)",

@@ -11,8 +11,8 @@ A two-player card game ("spades are spies") written in Go. The rules are in `REA
 - `docs/process/` holds the process docs; `docs/roadmap/roadmap.md` holds the roadmap.
 
 ## Toolchain
-- Go and `gh` are installed in WSL Ubuntu, not on Windows. Run Go commands through WSL from the repo root, e.g. `wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- bash scripts/check.sh`.
-- `scripts/check.sh` runs `go build`, `go vet` and `go test` over the module. Every commit must pass it.
+- Node and npm run natively on Windows; Go and `gh` are installed in WSL Ubuntu only. Run ad-hoc Go commands through WSL from PowerShell, e.g. `wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- go test ./src/...`.
+- `scripts/check.sh` runs the Go checks (gofmt, `go build`, `go vet`, `go test` over `src` and `test`, reached through WSL) then `npm run check` (typecheck, lint, Jest). Every commit must pass it. Run it with Git Bash from the repo root: `& "C:\Program Files\Git\bin\bash.exe" scripts/check.sh` (plain `bash` in PowerShell is WSL's, which has no Node). Expo SDK 58 wants Node 22.13 or newer; Node 20.18 is installed here and works with a warning.
 
 ## Rules
 - Follow `docs/process/code_style.md`.

@@ -10,6 +10,20 @@ export const DEAL_SIZE = 15;
 /** Cards each player discards during setup. */
 export const DISCARD_SIZE = 5;
 
+/** Rule options in one place so they can be tuned after playtesting. */
+export type RuleSettings = {
+  /** Trades in a row before the turn passes; 1 means a trade uses the whole turn. */
+  readonly tradesPerTurn: number;
+  /** Whether a round with equal row wins is decided by total points (used by round scoring). */
+  readonly tiebreakByTotalPoints: boolean;
+};
+
+/** The rules as written in the README. */
+export const DEFAULT_RULES: RuleSettings = {
+  tradesPerTurn: 1,
+  tiebreakByTotalPoints: true,
+};
+
 /** Where the game is: choosing discards, or playing (later items add round and game end). */
 export type Phase = 'setup' | 'playing';
 
@@ -25,9 +39,16 @@ export type GameState = {
   readonly board: Board;
   /** Face-down setup discards per player; null until that player has discarded. */
   readonly setupDiscards: readonly [readonly Card[] | null, readonly Card[] | null];
+  readonly settings: RuleSettings;
+  /** Whose turn it is while playing. */
+  readonly turn: Player;
+  /** Who has passed this round (a passed or empty-handed player plays no more cards). */
+  readonly passed: readonly [boolean, boolean];
+  /** Trades the current player has made this turn (only above 0 when `tradesPerTurn` > 1). */
+  readonly tradesThisTurn: number;
 };
 
-/** Choose the cards to discard during setup (the Turns task folds this into `Move`). */
+/** Choose the cards to discard during setup. */
 export type DiscardMove = {
   readonly type: 'discard';
   readonly player: Player;
@@ -40,7 +61,14 @@ export type MoveError =
   | 'alreadyDiscarded'
   | 'wrongDiscardCount'
   | 'cardNotInHand'
-  | 'duplicateCard';
+  | 'duplicateCard'
+  | 'notYourTurn'
+  | 'alreadyPassed'
+  | 'roundOver'
+  | 'notSuitCard'
+  | 'notSpy'
+  | 'invalidTarget'
+  | 'tradeLimitReached';
 
 /** The outcome of a move: the new state, or a typed error (never a throw). */
 export type MoveResult =
@@ -55,6 +83,9 @@ export type PlayerView = {
   readonly opponentHandSize: number;
   readonly deckSize: number;
   readonly board: Board;
+  readonly settings: RuleSettings;
+  readonly turn: Player;
+  readonly passed: readonly [boolean, boolean];
   /** Whether this player has made the setup discard. */
   readonly hasDiscarded: boolean;
   /** Whether the opponent has made the setup discard (the cards stay hidden). */
@@ -62,7 +93,7 @@ export type PlayerView = {
 };
 
 /** Shuffle a fresh deck with the seed, deal 15 to each player and start the setup phase. */
-export function newGame(seed: number): GameState {
+export function newGame(seed: number, settings: RuleSettings = DEFAULT_RULES): GameState {
   const deck = shuffle(newDeck(), createRng(seed));
   const first = draw(deck, DEAL_SIZE);
   const second = draw(first.deck, DEAL_SIZE);
@@ -73,6 +104,10 @@ export function newGame(seed: number): GameState {
     deck: second.deck,
     board: emptyBoard(),
     setupDiscards: [null, null],
+    settings,
+    turn: 0,
+    passed: [false, false],
+    tradesThisTurn: 0,
   };
 }
 
@@ -105,7 +140,13 @@ export function applyDiscard(state: GameState, move: DiscardMove): MoveResult {
   const deck = shuffle([...state.deck, ...d0, ...d1], createRng(state.seed ^ 0x5eed));
   return {
     ok: true,
-    state: { ...state, phase: 'playing', hands, deck, setupDiscards: [null, null] },
+    state: {
+      ...state,
+      phase: 'playing',
+      hands,
+      deck,
+      setupDiscards: [null, null],
+    },
   };
 }
 
@@ -119,6 +160,9 @@ export function viewFor(state: GameState, player: Player): PlayerView {
     opponentHandSize: state.hands[other].length,
     deckSize: state.deck.length,
     board: state.board,
+    settings: state.settings,
+    turn: state.turn,
+    passed: state.passed,
     hasDiscarded: state.setupDiscards[player] !== null,
     opponentHasDiscarded: state.setupDiscards[other] !== null,
   };

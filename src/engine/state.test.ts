@@ -1,12 +1,5 @@
 import { cardId } from './cards';
-import {
-  DEAL_SIZE,
-  DISCARD_SIZE,
-  applyDiscard,
-  newGame,
-  viewFor,
-  type GameState,
-} from './state';
+import { DEAL_SIZE, DISCARD_SIZE, applyDiscard, newGame, viewFor, type GameState } from './state';
 
 const idsOf = (cards: readonly Parameters<typeof cardId>[0][]) => cards.map(cardId);
 
@@ -145,7 +138,19 @@ describe('viewFor', () => {
       expect(text).not.toContain(`"rank":${c.rank},"suit":"${c.suit}"`);
     }
     expect(Object.keys(viewFor(g, 0)).sort()).toEqual(
-      ['board', 'deckSize', 'hand', 'hasDiscarded', 'opponentHandSize', 'opponentHasDiscarded', 'phase', 'player'].sort(),
+      [
+        'board',
+        'deckSize',
+        'hand',
+        'hasDiscarded',
+        'opponentHandSize',
+        'opponentHasDiscarded',
+        'passed',
+        'phase',
+        'player',
+        'settings',
+        'turn',
+      ].sort(),
     );
   });
 

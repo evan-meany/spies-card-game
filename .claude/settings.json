@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- bash scripts/check.sh)",
+      "Bash(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- bash scripts/check.sh)",
+      "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- go *)",
+      "Bash(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- go *)",
+      "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- gofmt *)",
+      "Bash(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- gofmt *)",
+      "PowerShell(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- gh pr view*)",
+      "Bash(wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- gh pr view*)",
+      "Bash(git fetch*)",
+      "PowerShell(git fetch*)",
+      "Bash(git checkout main)",
+      "PowerShell(git checkout main)",
+      "Bash(git pull --ff-only origin main)",
+      "PowerShell(git pull --ff-only origin main)"
+    ],
+    "deny": [
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push * +*)",
+      "PowerShell(git push * --force*)",
+      "PowerShell(git push * -f *)",
+      "PowerShell(git push * -f)",
+      "PowerShell(git push * +*)",
+      "Bash(git push origin main*)",
+      "PowerShell(git push origin main*)"
+    ]
+  }
+}

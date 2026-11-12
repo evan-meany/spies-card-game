@@ -1,7 +1,7 @@
 # Git Guidelines
 
 ## Branches
-- **One branch per roadmap phase**, named `phase-<n>-<slug>` (e.g. `phase-1-rules-engine`), from an up-to-date `main`. Every task in the phase is committed on it.
+- **One branch per roadmap phase**, named `phase-<n>-<slug>` (e.g. `phase-1-foundation-and-engine`), from an up-to-date `main`. Every task in the phase is committed on it.
 - Work outside a phase gets its own short-lived branch named `<bump>/<slug>` (e.g. `patch/fix-scoring`).
 - Never commit directly to `main`; the version bot is the only thing that commits there.
 

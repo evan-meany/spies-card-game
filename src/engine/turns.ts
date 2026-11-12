@@ -4,6 +4,9 @@
 import {
   addSpy,
   getPlaced,
+  removeSpy,
+  replacePlaced,
+  replaceSpy,
   opponentOf,
   placeCard,
   placed,
@@ -11,7 +14,7 @@ import {
   type Player,
   type RowSuit,
 } from './board';
-import { cardId, isSpy, type Card } from './cards';
+import { cardId, isDoubleAgent, isSpy, type Card } from './cards';
 import { draw } from './deck';
 import { applyDiscard, type DiscardMove, type GameState, type MoveResult } from './state';
 
@@ -40,8 +43,29 @@ export type TradeMove = {
 /** Stop playing for the rest of the round. */
 export type PassMove = { readonly type: 'pass'; readonly player: Player };
 
+/** Play a 2 of Clubs, Hearts or Diamonds in place of an opponent card of the same suit. */
+export type ReplaceMove = {
+  readonly type: 'replace';
+  readonly player: Player;
+  readonly card: Card;
+  readonly target: CardRef;
+};
+
+/** Play the 2 of Spades in place of a Spy on one of your own cards, moving that Spy onto an opponent card. */
+export type ReplaceSpyMove = {
+  readonly type: 'replaceSpy';
+  readonly player: Player;
+  readonly card: Card;
+  /** The card of yours that carries the Spy, and the Spy's position on it. */
+  readonly own: CardRef;
+  readonly spyIndex: number;
+  /** The opponent card that receives the removed Spy. */
+  readonly target: CardRef;
+};
+
 /** Every move a player can make. */
-export type Move = DiscardMove | PlayMove | SpyMove | TradeMove | PassMove;
+export type Move =
+  DiscardMove | PlayMove | SpyMove | TradeMove | PassMove | ReplaceMove | ReplaceSpyMove;
 
 const ROWS: readonly RowSuit[] = ['clubs', 'hearts', 'diamonds'];
 
@@ -98,6 +122,14 @@ function opponentTargets(state: GameState, player: Player): CardRef[] {
   );
 }
 
+function ownSpies(state: GameState, player: Player): { own: CardRef; spyIndex: number }[] {
+  return ROWS.flatMap((suit) =>
+    state.board[player][suit].flatMap((p, index) =>
+      p.spies.map((_, spyIndex) => ({ own: { player, suit, index }, spyIndex })),
+    ),
+  );
+}
+
 /** Every legal move for the player to move; empty during setup (discards are chosen) and after the round. */
 export function legalMoves(state: GameState): Move[] {
   if (state.phase !== 'playing' || bothPassed(state)) return [];
@@ -107,9 +139,21 @@ export function legalMoves(state: GameState): Move[] {
   for (const card of state.hands[player]) {
     if (!isSpy(card)) {
       moves.push({ type: 'play', player, card });
+      if (isDoubleAgent(card)) {
+        for (const target of targets.filter((t) => t.suit === card.suit)) {
+          moves.push({ type: 'replace', player, card, target });
+        }
+      }
       continue;
     }
     for (const target of targets) moves.push({ type: 'spy', player, card, target });
+    if (isDoubleAgent(card)) {
+      for (const { own, spyIndex } of ownSpies(state, player)) {
+        for (const target of targets) {
+          moves.push({ type: 'replaceSpy', player, card, own, spyIndex, target });
+        }
+      }
+    }
     if (state.tradesThisTurn < state.settings.tradesPerTurn) {
       moves.push({ type: 'trade', player, card });
     }
@@ -149,6 +193,35 @@ export function applyMove(state: GameState, move: Move): MoveResult {
         return { ok: false, error: 'invalidTarget' };
       }
       const board = addSpy(state.board, target, move.card);
+      return endTurn({ ...withHand(state, player, hand), board }, player);
+    }
+    case 'replace': {
+      if (!isDoubleAgent(move.card) || isSpy(move.card)) {
+        return { ok: false, error: 'notDoubleAgent' };
+      }
+      const { target } = move;
+      const victim = getPlaced(state.board, target);
+      if (target.player === player || !victim) return { ok: false, error: 'invalidTarget' };
+      if (target.suit !== move.card.suit) return { ok: false, error: 'wrongSuit' };
+      // The 2 takes the slot with no spies; the old card joins your row keeping its spies.
+      const swapped = replacePlaced(state.board, target, placed(move.card));
+      const board = placeCard(swapped, player, victim);
+      return endTurn({ ...withHand(state, player, hand), board }, player);
+    }
+    case 'replaceSpy': {
+      if (move.card.suit !== 'spades' || !isDoubleAgent(move.card)) {
+        return { ok: false, error: 'notDoubleAgent' };
+      }
+      const { own, spyIndex, target } = move;
+      if (target.player === player || !getPlaced(state.board, target)) {
+        return { ok: false, error: 'invalidTarget' };
+      }
+      if (own.player !== player || !getPlaced(state.board, own)?.spies[spyIndex]) {
+        return { ok: false, error: 'invalidSpy' };
+      }
+      const { spy } = removeSpy(state.board, own, spyIndex);
+      const swapped = replaceSpy(state.board, own, spyIndex, move.card);
+      const board = addSpy(swapped, target, spy);
       return endTurn({ ...withHand(state, player, hand), board }, player);
     }
     case 'trade': {

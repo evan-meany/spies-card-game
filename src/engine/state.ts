@@ -68,6 +68,9 @@ export type MoveError =
   | 'notSuitCard'
   | 'notSpy'
   | 'invalidTarget'
+  | 'invalidSpy'
+  | 'wrongSuit'
+  | 'notDoubleAgent'
   | 'tradeLimitReached';
 
 /** The outcome of a move: the new state, or a typed error (never a throw). */

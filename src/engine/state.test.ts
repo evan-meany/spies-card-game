@@ -51,14 +51,16 @@ describe('applyDiscard', () => {
   it.each([
     [0, 1],
     [1, 0],
-  ] as const)('accepts either order (%i then %i): 10 cards each, 32 in the deck', (a, b) => {
-    const s = expectOk(discardFirst(expectOk(discardFirst(newGame(4), a)), b));
-    expect(s.phase).toBe('playing');
-    expect(s.hands[0]).toHaveLength(10);
-    expect(s.hands[1]).toHaveLength(10);
-    expect(s.deck).toHaveLength(32);
-    expect(s.setupDiscards).toEqual([null, null]);
-  });
+  ] as const)(
+    'accepts either order (%i then %i): 10 cards each plus a flipped card, 30 in the deck',
+    (a, b) => {
+      const s = expectOk(discardFirst(expectOk(discardFirst(newGame(4), a)), b));
+      expect(s.phase).toBe('playing');
+      expect(s.hands[0].length + s.hands[1].length).toBe(22);
+      expect(s.deck).toHaveLength(30);
+      expect(s.setupDiscards).toEqual([null, null]);
+    },
+  );
 
   it('keeps all 52 cards after setup', () => {
     const s = expectOk(discardFirst(expectOk(discardFirst(newGame(5), 0)), 1));
@@ -70,7 +72,8 @@ describe('applyDiscard', () => {
     const discards = idsOf([...start.hands[0].slice(0, 5), ...start.hands[1].slice(0, 5)]);
     const s = expectOk(discardFirst(expectOk(discardFirst(start, 0)), 1));
     expect(idsOf(s.deck).slice(0, 10)).not.toEqual(discards);
-    expect(discards.every((id) => idsOf(s.deck).includes(id))).toBe(true);
+    const all = idsOf([...s.hands[0], ...s.hands[1], ...s.deck]);
+    expect(discards.every((id) => all.includes(id))).toBe(true);
   });
 
   it('is deterministic for a seed', () => {
@@ -148,6 +151,7 @@ describe('viewFor', () => {
         'passed',
         'phase',
         'player',
+        'roundResults',
         'settings',
         'turn',
       ].sort(),

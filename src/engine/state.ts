@@ -1,7 +1,8 @@
 // Game state and setup: dealing, the face-down discard step and the per-player view.
 
-import { emptyBoard, type Board, type Player } from './board';
+import { emptyBoard, type Board, type Player, type RowSuit } from './board';
 import { cardId, type Card } from './cards';
+import { closeRounds, startRound } from './rounds';
 import { createRng, draw, newDeck, shuffle, type Deck } from './deck';
 
 /** Cards dealt to each player at the start. */
@@ -24,8 +25,25 @@ export const DEFAULT_RULES: RuleSettings = {
   tiebreakByTotalPoints: true,
 };
 
-/** Where the game is: choosing discards, or playing (later items add round and game end). */
-export type Phase = 'setup' | 'playing';
+/** Where the game is: choosing discards, playing rounds, or finished. */
+export type Phase = 'setup' | 'playing' | 'gameOver';
+
+/** How one row of a finished round went; the winner is null for a tied row. */
+export type RowResult = {
+  readonly suit: RowSuit;
+  readonly totals: readonly [number, number];
+  readonly winner: Player | null;
+};
+
+/** The outcome of one finished round; the winner is null for a tied round. */
+export type RoundResult = {
+  readonly rows: readonly RowResult[];
+  /** Rows won by each player (tied rows count for neither). */
+  readonly rowWins: readonly [number, number];
+  /** Total points on each player's side. */
+  readonly totals: readonly [number, number];
+  readonly winner: Player | null;
+};
 
 /** The whole game, including hidden information; never send this to a client. */
 export type GameState = {
@@ -46,6 +64,12 @@ export type GameState = {
   readonly passed: readonly [boolean, boolean];
   /** Trades the current player has made this turn (only above 0 when `tradesPerTurn` > 1). */
   readonly tradesThisTurn: number;
+  /** Who went first in the latest round; null before the first round. */
+  readonly lastFirst: Player | null;
+  /** The finished rounds, in order. */
+  readonly roundResults: readonly RoundResult[];
+  /** Cards out of play for good: cleared board cards and traded Spies. */
+  readonly outOfPlay: readonly Card[];
 };
 
 /** Choose the cards to discard during setup. */
@@ -64,7 +88,6 @@ export type MoveError =
   | 'duplicateCard'
   | 'notYourTurn'
   | 'alreadyPassed'
-  | 'roundOver'
   | 'notSuitCard'
   | 'notSpy'
   | 'invalidTarget'
@@ -89,6 +112,8 @@ export type PlayerView = {
   readonly settings: RuleSettings;
   readonly turn: Player;
   readonly passed: readonly [boolean, boolean];
+  /** The finished rounds (the round in progress is one more than the count). */
+  readonly roundResults: readonly RoundResult[];
   /** Whether this player has made the setup discard. */
   readonly hasDiscarded: boolean;
   /** Whether the opponent has made the setup discard (the cards stay hidden). */
@@ -111,6 +136,9 @@ export function newGame(seed: number, settings: RuleSettings = DEFAULT_RULES): G
     turn: 0,
     passed: [false, false],
     tradesThisTurn: 0,
+    lastFirst: null,
+    roundResults: [],
+    outOfPlay: [],
   };
 }
 
@@ -143,13 +171,9 @@ export function applyDiscard(state: GameState, move: DiscardMove): MoveResult {
   const deck = shuffle([...state.deck, ...d0, ...d1], createRng(state.seed ^ 0x5eed));
   return {
     ok: true,
-    state: {
-      ...state,
-      phase: 'playing',
-      hands,
-      deck,
-      setupDiscards: [null, null],
-    },
+    state: closeRounds(
+      startRound({ ...state, phase: 'playing', hands, deck, setupDiscards: [null, null] }),
+    ),
   };
 }
 
@@ -166,6 +190,7 @@ export function viewFor(state: GameState, player: Player): PlayerView {
     settings: state.settings,
     turn: state.turn,
     passed: state.passed,
+    roundResults: state.roundResults,
     hasDiscarded: state.setupDiscards[player] !== null,
     opponentHasDiscarded: state.setupDiscards[other] !== null,
   };

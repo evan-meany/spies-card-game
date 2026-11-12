@@ -39,7 +39,9 @@ describe('shuffle', () => {
   });
 
   it('differs between seeds', () => {
-    expect(ids(shuffle(newDeck(), createRng(5)))).not.toEqual(ids(shuffle(newDeck(), createRng(6))));
+    expect(ids(shuffle(newDeck(), createRng(5)))).not.toEqual(
+      ids(shuffle(newDeck(), createRng(6))),
+    );
   });
 
   it('loses and duplicates no card, and actually reorders', () => {

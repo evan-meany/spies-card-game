@@ -1,5 +1,5 @@
 // Turns: the move union, the legal moves and applying a move during play.
-// The first turn belongs to player 0 until the round-start flip is added.
+// When a turn ends the round (both passed), the round is scored and the next one starts.
 
 import {
   addSpy,
@@ -16,6 +16,7 @@ import {
 } from './board';
 import { cardId, isDoubleAgent, isSpy, type Card } from './cards';
 import { draw } from './deck';
+import { bothPassed, closeRounds } from './rounds';
 import { applyDiscard, type DiscardMove, type GameState, type MoveResult } from './state';
 
 /** Play a Club, Heart or Diamond onto your own matching row. */
@@ -69,11 +70,6 @@ export type Move =
 
 const ROWS: readonly RowSuit[] = ['clubs', 'hearts', 'diamonds'];
 
-/** True once both players have passed (the round is over). */
-export function bothPassed(state: GameState): boolean {
-  return state.passed[0] && state.passed[1];
-}
-
 function withHand(state: GameState, player: Player, hand: readonly Card[]): GameState {
   return {
     ...state,
@@ -94,8 +90,8 @@ function settleTurn(start: GameState, turn: Player): GameState {
   for (const p of [0, 1] as const) {
     if (!state.passed[p] && state.hands[p].length === 0) state = withPassed(state, p);
   }
-  const current = state.passed[turn] ? opponentOf(turn) : turn;
-  return { ...state, turn: current };
+  if (bothPassed(state)) return closeRounds(state);
+  return { ...state, turn: state.passed[turn] ? opponentOf(turn) : turn };
 }
 
 function endTurn(state: GameState, player: Player): MoveResult {
@@ -132,7 +128,7 @@ function ownSpies(state: GameState, player: Player): { own: CardRef; spyIndex: n
 
 /** Every legal move for the player to move; empty during setup (discards are chosen) and after the round. */
 export function legalMoves(state: GameState): Move[] {
-  if (state.phase !== 'playing' || bothPassed(state)) return [];
+  if (state.phase !== 'playing') return [];
   const player = state.turn;
   const moves: Move[] = [{ type: 'pass', player }];
   const targets = opponentTargets(state, player);
@@ -165,7 +161,6 @@ export function legalMoves(state: GameState): Move[] {
 export function applyMove(state: GameState, move: Move): MoveResult {
   if (move.type === 'discard') return applyDiscard(state, move);
   if (state.phase !== 'playing') return { ok: false, error: 'wrongPhase' };
-  if (bothPassed(state)) return { ok: false, error: 'roundOver' };
   if (state.passed[move.player]) return { ok: false, error: 'alreadyPassed' };
   if (move.player !== state.turn) return { ok: false, error: 'notYourTurn' };
 
@@ -234,6 +229,7 @@ export function applyMove(state: GameState, move: Move): MoveResult {
       const traded: GameState = {
         ...withHand(state, player, [...hand, ...drawn]),
         deck,
+        outOfPlay: [...state.outOfPlay, move.card],
         tradesThisTurn: state.tradesThisTurn + 1,
       };
       if (traded.tradesThisTurn < state.settings.tradesPerTurn) {

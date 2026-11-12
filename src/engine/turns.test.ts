@@ -1,7 +1,7 @@
 import { cardValue, emptyBoard, placed, placeCard, type Board, type Player } from './board';
 import { cardId, makeCard, type Card } from './cards';
 import { DEFAULT_RULES, DISCARD_SIZE, newGame, viewFor, type GameState } from './state';
-import { applyMove, bothPassed, legalMoves, type Move } from './turns';
+import { applyMove, legalMoves, type Move } from './turns';
 
 const C = (rank: Card['rank'], suit: Card['suit']) => makeCard(rank, suit);
 
@@ -128,7 +128,7 @@ describe('playing a spy', () => {
   it('lets several spies stack and floors the value at 0', () => {
     let s = playing(
       [
-        [C(6, 'spades'), C(7, 'spades')],
+        [C(6, 'spades'), C(7, 'spades'), C(5, 'clubs')],
         [C(3, 'clubs'), C(4, 'clubs')],
       ],
       { board: withOpponentJack() },
@@ -206,9 +206,8 @@ describe('passing', () => {
     let s = playing([[C(5, 'clubs')], [C(3, 'clubs')]]);
     s = ok(s, { type: 'pass', player: 0 });
     s = ok(s, { type: 'pass', player: 1 });
-    expect(bothPassed(s)).toBe(true);
-    expect(legalMoves(s)).toEqual([]);
-    expect(err(s, { type: 'play', player: 1, card: C(3, 'clubs') })).toBe('roundOver');
+    expect(s.roundResults).toHaveLength(1);
+    expect(s.passed).toEqual([false, false]);
   });
 
   it('is always a legal move while playing', () => {
@@ -232,7 +231,7 @@ describe('auto-pass', () => {
     let s = playing([[C(5, 'clubs')], [C(3, 'clubs')]]);
     s = ok(s, { type: 'play', player: 0, card: C(5, 'clubs') });
     s = ok(s, { type: 'play', player: 1, card: C(3, 'clubs') });
-    expect(bothPassed(s)).toBe(true);
+    expect(s.roundResults).toHaveLength(1);
   });
 
   it('does not pass a player who still holds a spy', () => {

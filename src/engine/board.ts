@@ -137,4 +137,3 @@ export function moveCard(board: Board, ref: CardRef, toPlayer: Player): Board {
   const removed = withRow(board, ref.player, ref.suit, row);
   return withRow(removed, toPlayer, ref.suit, [...removed[toPlayer][ref.suit], target]);
 }
-

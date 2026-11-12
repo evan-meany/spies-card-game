@@ -1,18 +1,15 @@
 # Spies
 
-A two-player card game ("spades are spies") written in Go. The rules are in `README.md`; they are the spec for the game logic.
-
-> The project is being re-targeted from Go to an Android and iOS app (Expo, React Native, TypeScript). The Layout, Toolchain and Rules below describe the Go code as it stands until `docs/roadmap/roadmap.md` phase 1 replaces it; the roadmap wins where they differ.
+A two-player card game ("spades are spies") as an Android and iOS app (Expo, React Native, TypeScript). The rules are in `README.md`; they are the spec for the game logic. The plan is `docs/roadmap/roadmap.md`; where it and this file differ, the roadmap wins.
 
 ## Layout
-- `src/main.go` is the entry point. `src/game/` holds the cards, deck and game rules. `src/util/` holds small generic helpers.
-- `test/` holds a prototype WebSocket matchmaking server (`server.go`) and a browser console client (`client.js`).
-- `scripts/` holds the run and check scripts and the CI versioning scripts. `.github/workflows/` validates PR titles and bumps `VERSION` and `CHANGELOG.md` on merge.
+- `src/engine/` holds the pure rules engine (cards, deck, board, setup, turns, rounds) with its `*.test.ts` files next to the code. `src/app/` holds the Expo Router screens. `src/__tests__/` holds the app-level smoke test.
+- `scripts/` holds the check script and the CI versioning scripts. `.github/workflows/` validates PR titles and bumps `VERSION` and `CHANGELOG.md` on merge.
 - `docs/process/` holds the process docs; `docs/roadmap/roadmap.md` holds the roadmap.
 
 ## Toolchain
-- Node and npm run natively on Windows; Go and `gh` are installed in WSL Ubuntu only. Run ad-hoc Go commands through WSL from PowerShell, e.g. `wsl -d Ubuntu --cd /mnt/c/Users/Evan/Dev/spies-card-game -- go test ./src/...`.
-- `scripts/check.sh` runs the Go checks (gofmt, `go build`, `go vet`, `go test` over `src` and `test`, reached through WSL) then `npm run check` (typecheck, lint, Jest). Every commit must pass it. Run it with Git Bash from the repo root: `& "C:\Program Files\Git\bin\bash.exe" scripts/check.sh` (plain `bash` in PowerShell is WSL's, which has no Node). Expo SDK 58 wants Node 22.13 or newer; Node 20.18 is installed here and works with a warning.
+- Node and npm run natively on Windows. `gh` is installed in WSL Ubuntu only; the orchestrator runs it through WSL.
+- `scripts/check.sh` wraps `npm run check` (typecheck, lint, Jest). Every commit must pass it. Run it with Git Bash from the repo root: `& "C:Program FilesGitinash.exe" scripts/check.sh` (plain `bash` in PowerShell is WSL's, which has no Node). Expo SDK 58 wants Node 22.13 or newer; Node 20.18 is installed here and works with a warning.
 
 ## Rules
 - Follow `docs/process/code_style.md`.

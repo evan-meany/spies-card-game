@@ -125,3 +125,9 @@ The player who wins **the most rows** wins the round.
 - **Tied rounds do not count** toward determining a winner.
 - If both players win the **same number of rounds**, the game ends in a **tie**.
 - If a player wins the **first two rounds**, the third round may be skipped.
+
+# **Running the app**
+The app is built with Expo, React Native and TypeScript.
+- `npm install` installs the dependencies.
+- `npx expo start` starts the dev server; open it in Expo Go on Android (press `a` for an emulator).
+- `npm run check` runs the typecheck, lint and tests (`scripts/check.sh` wraps it).

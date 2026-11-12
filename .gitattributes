@@ -13,6 +13,4 @@
 # Markdown and VERSION
 *.md text eol=lf
 VERSION text eol=lf
-# Shell scripts and Go sources must use LF (bash in WSL, gofmt -l)
-*.sh text eol=lf
-*.go text eol=lf
+

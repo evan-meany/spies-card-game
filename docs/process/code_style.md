@@ -1,11 +1,11 @@
 # Code Style
 
-> This describes the Go code as it stands. Phase 1 of `docs/roadmap/roadmap.md` moves the project to TypeScript (Expo) and rewrites this file; until then follow it for any Go, and use the same spirit (pure engine in `src/engine/`, tests per README rule, errors not panics) for new TypeScript.
+TypeScript in strict mode; `npm run check` (typecheck, lint, Jest) must be clean.
 
-- Format with `gofmt`; `go vet` must be clean.
-- Follow the existing naming: exported types and constructors (`Card`, `NewDeck`), `String()` methods for printable enums, `All<Things>` arrays for iteration.
-- Every exported identifier gets a one-line doc comment. Keep comments to a single line.
-- Keep game rules in `src/game/`, one file per concept (`deck.go`, `board.go`, `round.go`). No I/O or global state in `src/game/`; pass a seeded `*rand.Rand` where randomness is needed.
-- Return errors for illegal moves (`ErrIllegalMove`-style sentinel errors) instead of panicking.
-- Tests are table-driven `_test.go` files next to the code they test. Each rule in `README.md` gets at least one test, including its edge cases (values floor at 0, ties, auto-pass).
-- Prefer the standard library. Add a dependency only when a task needs it and say why in the commit body.
+- Follow the existing naming: `PascalCase` types, `camelCase` functions and values, `UPPER_SNAKE_CASE` constants (`ALL_SUITS`, `DEFAULT_RULES`). Prefer string-literal unions and discriminated unions over enums.
+- Keep comments short; add a one-line doc comment to each exported identifier.
+- Keep game rules in `src/engine/`, one file per concept (`cards.ts`, `deck.ts`, `board.ts`). The engine has no I/O, no global state and no React, React Native, Expo or Node imports; pass a seeded random function where randomness is needed.
+- State is immutable: functions return new values and never mutate their arguments.
+- Return typed errors for illegal moves instead of throwing; throw only for programmer errors.
+- Tests are `*.test.ts` files next to the code, table-driven where it fits. Each rule in `README.md` gets at least one test, including its edge cases (values floor at 0, ties, auto-pass).
+- Prefer the platform and installed packages. Add a dependency only when a task needs it, with `npx expo install`, and say why in the commit body.

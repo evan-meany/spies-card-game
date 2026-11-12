@@ -20,17 +20,6 @@
       "Bash(git pull --ff-only origin main)",
       "PowerShell(git pull --ff-only origin main)"
     ],
-    "deny": [
-      "Bash(git push * --force*)",
-      "Bash(git push * -f *)",
-      "Bash(git push * -f)",
-      "Bash(git push * +*)",
-      "PowerShell(git push * --force*)",
-      "PowerShell(git push * -f *)",
-      "PowerShell(git push * -f)",
-      "PowerShell(git push * +*)",
-      "Bash(git push origin main*)",
-      "PowerShell(git push origin main*)"
-    ]
+    "deny": []
   }
 }

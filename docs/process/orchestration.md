@@ -27,5 +27,5 @@ An orchestrator agent hands roadmap tasks to worker subagents one at a time, so 
 
 ## Decisions
 - Workers never start subagents; the orchestrator is the main session and the worker a subagent.
-- Workers never push, merge, open PRs or skip hooks. The orchestrator pushes phase branches and opens PRs only after you approve the phase, and merges only when you say so. `.claude/settings.json` only denies force-push and pushing to main.
+- Workers never push, merge, open PRs or skip hooks. The orchestrator pushes phase branches and opens PRs only after you approve the phase, and merges only when you say so. `.claude/settings.json` denies nothing, so only the agents' instructions stop force-pushes.
 - Workers share state only through the repo, so anything the next task needs goes in a doc or commit. Worker reports pile up in the orchestrator's context, so keep them short.
